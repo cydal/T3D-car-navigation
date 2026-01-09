@@ -248,17 +248,32 @@ class CarBrain:
             else:
                 done = True
         else:
-            # Reward for staying on road (center sensor - high brightness = road)
-            center_sensor = next_state[3]
+            # Sensor indices: [0:-45°, 1:-30°, 2:-15°, 3:0°, 4:+15°, 5:+30°, 6:+45°]
+            sensors = next_state[:7]
+            
+            # 1. Road adherence - all sensors should see road (high brightness)
+            avg_sensor = np.mean(sensors)
+            reward += avg_sensor * 3
+            
+            # 2. Center sensor bonus (most important for forward path)
+            center_sensor = sensors[3]
             reward += center_sensor * 5
             
-            # Strong reward for approaching target
+            # 3. Penalty for obstacles on sides (encourage staying centered on road)
+            side_sensors = [sensors[0], sensors[1], sensors[5], sensors[6]]  # Far left/right
+            min_side = min(side_sensors)
+            if min_side < 0.3:  # Obstacle detected on side
+                reward -= 10
+            
+            # 4. Strong reward for approaching target
             if self.prev_dist is not None:
                 dist_delta = self.prev_dist - dist
-                reward += dist_delta * 2  # Proportional to distance improvement
+                reward += dist_delta * 5  # Increased from 2 to 5
             
-            # Bonus for moving forward (encourage exploration)
-            reward += speed * 0.5
+            # 5. Reward for facing target (alignment bonus)
+            angle_to_target = next_state[7]  # Normalized angle
+            alignment_bonus = (1.0 - abs(angle_to_target)) * 2
+            reward += alignment_bonus
             
             self.prev_dist = dist
             
