@@ -210,7 +210,7 @@ class CarBrain:
         """
         # Denormalize actions
         steering = action[0]  # Already in degrees from actor
-        speed = action[1]     # Already in pixels/step from actor
+        speed = abs(action[1])  # Ensure speed is always positive
         
         # Update car state
         self.car_angle += steering
@@ -245,11 +245,15 @@ class CarBrain:
             else:
                 done = True
         else:
-            # Small reward for staying on road (center sensor)
-            reward += (1.0 - next_state[3]) * 20
-            # Penalty for moving away from target
-            if self.prev_dist is not None and dist > self.prev_dist:
-                reward -= 10
+            # Reward for staying on road (center sensor - high brightness = road)
+            reward += next_state[3] * 10
+            
+            # Reward for approaching target, penalty for moving away
+            if self.prev_dist is not None:
+                if dist < self.prev_dist:
+                    reward += 5  # Approaching target
+                else:
+                    reward -= 5  # Moving away from target
             self.prev_dist = dist
             
         self.score += reward
