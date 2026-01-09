@@ -57,8 +57,9 @@ EXPL_NOISE = 0.1
 START_TIMESTEPS = 10000  # Random exploration steps
 
 # Action bounds
-MAX_STEERING = 30.0  # degrees
+MAX_STEERING = 5.0   # degrees per step (reduced for stability)
 MAX_SPEED = 3.0      # pixels/step
+MIN_SPEED = 1.5      # minimum speed to prevent stopping
 
 # Target Colors
 TARGET_COLORS = [
@@ -206,14 +207,16 @@ class CarBrain:
     def step(self, action):
         """
         Execute action in environment
-        action: [steering_angle, speed] both in [-1, 1] range from actor
+        action: [steering_angle, speed] from actor network
         """
         # Denormalize actions
-        steering = action[0]  # Already in degrees from actor
-        speed = abs(action[1])  # Ensure speed is always positive
+        steering_delta = action[0]  # Steering change per step
+        # Map speed from [-MAX_SPEED, MAX_SPEED] to [MIN_SPEED, MAX_SPEED]
+        speed = MIN_SPEED + (action[1] + MAX_SPEED) * (MAX_SPEED - MIN_SPEED) / (2 * MAX_SPEED)
+        speed = np.clip(speed, MIN_SPEED, MAX_SPEED)
         
         # Update car state
-        self.car_angle += steering
+        self.car_angle += steering_delta
         self.car_speed = speed
         
         rad = math.radians(self.car_angle)
@@ -246,14 +249,17 @@ class CarBrain:
                 done = True
         else:
             # Reward for staying on road (center sensor - high brightness = road)
-            reward += next_state[3] * 10
+            center_sensor = next_state[3]
+            reward += center_sensor * 5
             
-            # Reward for approaching target, penalty for moving away
+            # Strong reward for approaching target
             if self.prev_dist is not None:
-                if dist < self.prev_dist:
-                    reward += 5  # Approaching target
-                else:
-                    reward -= 5  # Moving away from target
+                dist_delta = self.prev_dist - dist
+                reward += dist_delta * 2  # Proportional to distance improvement
+            
+            # Bonus for moving forward (encourage exploration)
+            reward += speed * 0.5
+            
             self.prev_dist = dist
             
         self.score += reward
