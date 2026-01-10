@@ -8,6 +8,11 @@ import os
 import math
 import numpy as np
 import random
+import torch
+import argparse
+import pickle
+import time
+from collections import deque
 
 # --- PYTORCH ---
 import torch
@@ -46,15 +51,15 @@ SENSOR_ANGLE = 45
 TARGET_RADIUS = 20
 
 # T3D Hyperparameters
-BATCH_SIZE = 100
+BATCH_SIZE = 256  # Increased for more stable learning
 GAMMA = 0.99
 TAU = 0.005
 POLICY_NOISE = 0.2
 NOISE_CLIP = 0.5
 POLICY_FREQ = 2
-LR = 3e-4
-EXPL_NOISE = 0.1
-START_TIMESTEPS = 3000  # Reduced for faster learning
+LR = 5e-4  # Slightly increased for faster convergence
+EXPL_NOISE = 0.2  # Increased exploration noise
+START_TIMESTEPS = 10000  # More random exploration for diverse experiences
 
 # Action bounds
 MAX_STEERING = 8.0   # degrees per step (increased for better maneuverability)
@@ -254,38 +259,30 @@ class CarBrain:
             else:
                 done = True
         else:
-            # CORRECTED REWARD - sensor values are brightness (1.0 = road, 0.0 = obstacle)
-            # The DQN formula was inverted! We want HIGH sensor values (road), not low
+            # Simple, balanced reward for binary sensors
             sensors = next_state[:7]
             
-            # 1. Reward staying on road - use average of all sensors
-            avg_brightness = np.mean(sensors)
-            reward += avg_brightness * 15
+            # 1. Reward clear sensors (binary: 0 or 1)
+            num_clear = sum(sensors)
+            reward += num_clear * 2.5  # Moderate reward per clear sensor
             
-            # 2. Crash prevention - penalize when obstacles detected
-            min_sensor = min(sensors)
-            if min_sensor < 0.5:  # Obstacle detected
-                # Penalty increases as obstacle gets closer
-                reward -= (0.5 - min_sensor) * 30
-            
-            # 3. Strong reward for approaching target
+            # 2. Approaching target
             dist_improvement = 0
             if self.prev_dist is not None:
                 dist_improvement = self.prev_dist - dist
-                reward += dist_improvement * 20
+                reward += dist_improvement * 15
             self.prev_dist = dist
             
-            # 4. Reward facing toward target (critical for continuous steering)
-            angle_to_target = next_state[7]  # normalized [-1, 1]
-            reward += (1.0 - abs(angle_to_target)) * 5
+            # 3. Alignment with target
+            angle_to_target = next_state[7]
+            reward += (1.0 - abs(angle_to_target)) * 3
             
-            # Store debug info for visualization
+            # Store debug info
             self.debug_sensors = sensors
             self.debug_reward_components = {
-                'road': avg_brightness * 15,
-                'crash_penalty': -(0.5 - min_sensor) * 30 if min_sensor < 0.5 else 0,
-                'distance': dist_improvement * 20,
-                'alignment': (1.0 - abs(angle_to_target)) * 5
+                'clear_sensors': num_clear * 2.5,
+                'distance': dist_improvement * 15,
+                'alignment': (1.0 - abs(angle_to_target)) * 3
             }
             
         self.score += reward
@@ -834,8 +831,7 @@ class T3DNavApp(QMainWindow):
         
         # Reward components
         reward_text = "\nREWARD COMPONENTS:\n"
-        reward_text += f"  Road:     {components['road']:+7.2f}\n"
-        reward_text += f"  Crash:    {components['crash_penalty']:+7.2f}\n"
+        reward_text += f"  Clear:    {components['clear_sensors']:+7.2f}\n"
         reward_text += f"  Distance: {components['distance']:+7.2f}\n"
         reward_text += f"  Align:    {components['alignment']:+7.2f}\n"
         total = sum(components.values())
@@ -859,10 +855,168 @@ class T3DNavApp(QMainWindow):
             self.sensor_items[i].set_sensor_data(sensor_val, coord)
 
 # ==========================================
-# 5. MAIN
+# 5. HEADLESS TRAINING MODE
+# ==========================================
+class HeadlessTrainer:
+    def __init__(self, map_path, shared_buffer_path, instance_id):
+        self.map_path = map_path
+        self.shared_buffer_path = shared_buffer_path
+        self.instance_id = instance_id
+        
+        # Load map
+        self.map_img = QImage(map_path).convertToFormat(QImage.Format.Format_RGB32)
+        self.brain = CarBrain(self.map_img)
+        
+        # Setup targets (same as GUI)
+        self.setup_default_targets()
+        
+        print(f"[Instance {instance_id}] Headless trainer initialized")
+        print(f"[Instance {instance_id}] Shared buffer: {shared_buffer_path}")
+    
+    def setup_default_targets(self):
+        """Setup default target positions - randomly placed on valid road"""
+        w, h = self.map_img.width(), self.map_img.height()
+        num_targets = 4
+        
+        for _ in range(num_targets):
+            placed = False
+            for attempt in range(100):
+                x = random.randint(100, w - 100)
+                y = random.randint(100, h - 100)
+                if self.brain.check_pixel(x, y) > 0.5:
+                    self.brain.add_target(QPointF(x, y))
+                    placed = True
+                    break
+            if not placed:
+                # Fallback to safe positions
+                self.brain.add_target(QPointF(w//2, h//2))
+    
+    def save_buffer(self):
+        """Save replay buffer to shared file"""
+        try:
+            with open(self.shared_buffer_path, 'wb') as f:
+                pickle.dump(self.brain.replay_buffer.storage, f)
+        except Exception as e:
+            print(f"[Instance {self.instance_id}] Error saving buffer: {e}")
+    
+    def save_model(self, path='t3d_model.pth'):
+        """Save model weights"""
+        try:
+            torch.save({
+                'actor': self.brain.agent.actor.state_dict(),
+                'critic': self.brain.agent.critic.state_dict(),
+                'actor_target': self.brain.agent.actor_target.state_dict(),
+                'critic_target': self.brain.agent.critic_target.state_dict(),
+                'timesteps': self.brain.total_timesteps
+            }, path)
+        except Exception as e:
+            print(f"[Instance {self.instance_id}] Error saving model: {e}")
+    
+    def load_model(self, path='t3d_model.pth'):
+        """Load model weights"""
+        try:
+            if os.path.exists(path):
+                checkpoint = torch.load(path)
+                self.brain.agent.actor.load_state_dict(checkpoint['actor'])
+                self.brain.agent.critic.load_state_dict(checkpoint['critic'])
+                self.brain.agent.actor_target.load_state_dict(checkpoint['actor_target'])
+                self.brain.agent.critic_target.load_state_dict(checkpoint['critic_target'])
+                self.brain.total_timesteps = checkpoint['timesteps']
+                print(f"[Instance {self.instance_id}] Loaded model from {path} (timesteps: {self.brain.total_timesteps})")
+        except Exception as e:
+            print(f"[Instance {self.instance_id}] Error loading model: {e}")
+    
+    def load_buffer(self):
+        """Load replay buffer from shared file"""
+        try:
+            if os.path.exists(self.shared_buffer_path):
+                with open(self.shared_buffer_path, 'rb') as f:
+                    self.brain.replay_buffer.storage = pickle.load(f)
+                print(f"[Instance {self.instance_id}] Loaded {len(self.brain.replay_buffer.storage)} experiences")
+        except Exception as e:
+            print(f"[Instance {self.instance_id}] Error loading buffer: {e}")
+    
+    def train(self, num_episodes=1000, save_interval=100, model_path='t3d_model.pth'):
+        """Run headless training loop"""
+        print(f"[Instance {self.instance_id}] Starting training for {num_episodes} episodes")
+        
+        # Load existing model if available
+        self.load_model(model_path)
+        
+        for episode in range(num_episodes):
+            # Load shared buffer and model periodically
+            if episode % 10 == 0:
+                self.load_buffer()
+                self.load_model(model_path)
+            
+            # Place car at random position
+            w, h = self.map_img.width(), self.map_img.height()
+            placed = False
+            for _ in range(100):
+                x = random.randint(50, w - 50)
+                y = random.randint(50, h - 50)
+                if self.brain.check_pixel(x, y) > 0.5:
+                    self.brain.set_start_pos(QPointF(x, y))
+                    placed = True
+                    break
+            
+            if not placed:
+                continue
+            
+            # Reset for new episode
+            state = self.brain.reset()
+            done = False
+            episode_reward = 0
+            steps = 0
+            
+            # Run episode
+            while not done and steps < 1000:
+                action = self.brain.select_action(state)
+                next_state, reward, done = self.brain.step(action)
+                
+                # Store transition
+                self.brain.replay_buffer.add((state, next_state, action, reward, float(done)))
+                
+                # Train
+                self.brain.train_step()
+                
+                state = next_state
+                episode_reward += reward
+                steps += 1
+                self.brain.total_timesteps += 1
+            
+            # Save buffer and model periodically
+            if episode % save_interval == 0:
+                self.save_buffer()
+                self.save_model(model_path)
+                print(f"[Instance {self.instance_id}] Episode {episode}: Reward={episode_reward:.1f}, Steps={steps}, Buffer={len(self.brain.replay_buffer.storage)}")
+        
+        # Final save
+        self.save_buffer()
+        self.save_model(model_path)
+        print(f"[Instance {self.instance_id}] Training complete. Final buffer size: {len(self.brain.replay_buffer.storage)}")
+
+# ==========================================
+# 6. MAIN
 # ==========================================
 if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    window = T3DNavApp()
-    window.show()
-    sys.exit(app.exec())
+    parser = argparse.ArgumentParser(description='T3D Car Navigation Training')
+    parser.add_argument('--headless', action='store_true', help='Run in headless mode (no GUI)')
+    parser.add_argument('--shared-buffer', type=str, default='shared_buffer.pkl', help='Path to shared replay buffer')
+    parser.add_argument('--instance-id', type=int, default=0, help='Instance ID for logging')
+    parser.add_argument('--map', type=str, default='city_map.png', help='Path to map image')
+    parser.add_argument('--episodes', type=int, default=1000, help='Number of episodes for headless training')
+    parser.add_argument('--model', type=str, default='t3d_model.pth', help='Path to model checkpoint')
+    
+    args = parser.parse_args()
+    
+    if args.headless:
+        # Headless training mode
+        trainer = HeadlessTrainer(args.map, args.shared_buffer, args.instance_id)
+        trainer.train(num_episodes=args.episodes, model_path=args.model)
+    else:
+        # GUI mode
+        app = QApplication(sys.argv)
+        window = T3DNavApp()
+        window.show()
+        sys.exit(app.exec())
