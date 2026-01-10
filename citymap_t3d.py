@@ -58,7 +58,9 @@ POLICY_NOISE = 0.2
 NOISE_CLIP = 0.5
 POLICY_FREQ = 2
 LR = 5e-4  # Slightly increased for faster convergence
-EXPL_NOISE = 0.2  # Increased exploration noise
+EXPL_NOISE_START = 0.2  # Initial exploration noise
+EXPL_NOISE_END = 0.05   # Final exploration noise (reduced for exploitation)
+EXPL_DECAY_STEPS = 50000  # Decay over 50k steps
 START_TIMESTEPS = 10000  # More random exploration for diverse experiences
 
 # Action bounds
@@ -299,14 +301,19 @@ class CarBrain:
         return 0.0
 
     def select_action(self, state):
-        """Select action with exploration noise"""
+        """Select action with decaying exploration noise"""
         if self.total_timesteps < START_TIMESTEPS:
             # Random exploration
             action = np.random.uniform(-self.max_action, self.max_action, size=self.action_dim)
         else:
-            # Use policy with Gaussian noise
+            # Use policy with decaying Gaussian noise
             action = self.agent.select_action(state)
-            noise = np.random.normal(0, EXPL_NOISE * self.max_action, size=self.action_dim)
+            
+            # Calculate decayed exploration noise
+            progress = min(1.0, (self.total_timesteps - START_TIMESTEPS) / EXPL_DECAY_STEPS)
+            current_noise = EXPL_NOISE_START + (EXPL_NOISE_END - EXPL_NOISE_START) * progress
+            
+            noise = np.random.normal(0, current_noise * self.max_action, size=self.action_dim)
             action = np.clip(action + noise, -self.max_action, self.max_action)
         
         return action
@@ -443,6 +450,21 @@ class CarItem(QGraphicsItem):
     def __init__(self):
         super().__init__()
         self.setZValue(100)
+        
+        # Load car image
+        car_img_path = os.path.join(os.path.dirname(__file__), 'car.png')
+        if os.path.exists(car_img_path):
+            self.car_image = QImage(car_img_path)
+            # Scale to match original car dimensions
+            self.car_image = self.car_image.scaled(
+                int(CAR_WIDTH), int(CAR_HEIGHT),
+                Qt.AspectRatioMode.IgnoreAspectRatio,
+                Qt.TransformationMode.SmoothTransformation
+            )
+        else:
+            self.car_image = None
+        
+        # Fallback to rectangle if image not found
         self.brush = QBrush(C_ACCENT)
         self.pen = QPen(Qt.GlobalColor.white, 1)
 
@@ -450,11 +472,19 @@ class CarItem(QGraphicsItem):
         return QRectF(-CAR_WIDTH/2, -CAR_HEIGHT/2, CAR_WIDTH, CAR_HEIGHT)
 
     def paint(self, painter, option, widget):
-        painter.setBrush(self.brush)
-        painter.setPen(self.pen)
-        painter.drawRoundedRect(self.boundingRect(), 2, 2)
-        painter.setBrush(Qt.GlobalColor.white)
-        painter.drawRect(int(CAR_WIDTH/2)-2, -3, 2, 6)
+        if self.car_image:
+            # Draw car image centered
+            painter.drawImage(
+                int(-CAR_WIDTH/2), int(-CAR_HEIGHT/2),
+                self.car_image
+            )
+        else:
+            # Fallback to rectangle
+            painter.setBrush(self.brush)
+            painter.setPen(self.pen)
+            painter.drawRoundedRect(self.boundingRect(), 2, 2)
+            painter.setBrush(Qt.GlobalColor.white)
+            painter.drawRect(int(CAR_WIDTH/2)-2, -3, 2, 6)
 
 class TargetItem(QGraphicsItem):
     def __init__(self, color=None, is_active=True, number=1):

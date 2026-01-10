@@ -1,0 +1,166 @@
+[Instance 3] Headless trainer initialized
+[Instance 3] Shared buffer: shared_buffer.pkl
+[Instance 3] Starting training for 10000 episodes
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 597)
+[Instance 3] Loaded 597 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 597)
+[Instance 3] Episode 0: Reward=-100.0, Steps=1, Buffer=598
+[Instance 3] Loaded 601 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 601)
+[Instance 3] Loaded 601 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 601)
+[Instance 3] Loaded 601 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 601)
+[Instance 3] Loaded 601 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 601)
+[Instance 3] Loaded 601 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 601)
+[Instance 3] Loaded 601 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 601)
+[Instance 3] Loaded 601 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 601)
+[Instance 3] Loaded 614 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 614)
+[Instance 3] Loaded 621 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 621)
+[Instance 3] Loaded 621 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 621)
+[Instance 3] Episode 100: Reward=-105.3, Steps=2, Buffer=623
+[Instance 3] Loaded 623 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 623)
+[Instance 3] Loaded 623 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 623)
+[Instance 3] Loaded 623 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 623)
+[Instance 3] Loaded 623 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 623)
+[Instance 3] Loaded 623 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 623)
+[Instance 3] Loaded 623 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 623)
+[Instance 3] Loaded 623 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 623)
+[Instance 3] Loaded 623 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 623)
+[Instance 3] Loaded 623 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 623)
+[Instance 3] Loaded 636 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 636)
+[Instance 3] Episode 200: Reward=-147.0, Steps=9, Buffer=645
+[Instance 3] Loaded 645 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 645)
+[Instance 3] Loaded 669 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 669)
+[Instance 3] Loaded 669 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 669)
+[Instance 3] Loaded 669 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 669)
+[Instance 3] Loaded 669 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 669)
+[Instance 3] Loaded 669 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 669)
+[Instance 3] Loaded 669 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 669)
+[Instance 3] Loaded 672 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 672)
+[Instance 3] Loaded 672 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 672)
+[Instance 3] Loaded 672 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 672)
+[Instance 3] Episode 300: Reward=-105.3, Steps=3, Buffer=675
+[Instance 3] Loaded 724 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 724)
+[Instance 3] Loaded 724 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 724)
+[Instance 3] Loaded 724 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 724)
+[Instance 3] Loaded 724 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 724)
+[Instance 3] Loaded 724 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 724)
+[Instance 3] Loaded 724 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 724)
+[Instance 3] Loaded 724 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 724)
+[Instance 3] Loaded 724 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 724)
+[Instance 3] Loaded 745 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 745)
+[Instance 3] Loaded 745 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 745)
+[Instance 3] Episode 400: Reward=-130.3, Steps=2, Buffer=747
+[Instance 3] Loaded 754 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 754)
+[Instance 3] Loaded 754 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 754)
+[Instance 3] Loaded 754 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 754)
+[Instance 3] Loaded 754 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 754)
+[Instance 3] Loaded 754 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 754)
+[Instance 3] Loaded 754 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 754)
+[Instance 3] Loaded 754 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 754)
+[Instance 3] Loaded 762 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 762)
+[Instance 3] Loaded 762 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 762)
+[Instance 3] Loaded 762 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 762)
+[Instance 3] Episode 500: Reward=-100.0, Steps=1, Buffer=763
+[Instance 3] Loaded 796 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 796)
+[Instance 3] Loaded 796 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 796)
+[Instance 3] Loaded 796 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 796)
+[Instance 3] Loaded 796 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 796)
+[Instance 3] Loaded 796 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 796)
+[Instance 3] Loaded 796 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 796)
+[Instance 3] Loaded 796 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 796)
+[Instance 3] Loaded 796 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 796)
+[Instance 3] Loaded 796 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 796)
+[Instance 3] Loaded 799 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 799)
+[Instance 3] Episode 600: Reward=-35.0, Steps=3, Buffer=802
+[Instance 3] Loaded 802 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 802)
+[Instance 3] Loaded 802 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 802)
+[Instance 3] Loaded 802 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 802)
+[Instance 3] Loaded 814 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 814)
+[Instance 3] Loaded 814 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 814)
+[Instance 3] Loaded 814 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 814)
+[Instance 3] Loaded 814 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 814)
+[Instance 3] Loaded 814 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 814)
+[Instance 3] Loaded 814 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 814)
+[Instance 3] Loaded 814 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 814)
+[Instance 3] Episode 700: Reward=-100.0, Steps=1, Buffer=815
+[Instance 3] Loaded 836 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 836)
+[Instance 3] Loaded 836 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 836)
+[Instance 3] Loaded 836 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 836)
+[Instance 3] Loaded 836 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 836)
+[Instance 3] Loaded 839 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 839)
+[Instance 3] Loaded 839 experiences
+[Instance 3] Loaded model from t3d_model.pth (timesteps: 839)
