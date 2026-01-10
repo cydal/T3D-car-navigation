@@ -184,8 +184,12 @@ class CarBrain:
             val = 0.0
             if 0 <= sx < self.w and 0 <= sy < self.h:
                 c = QColor(self.map.pixel(int(sx), int(sy)))
-                brightness = (c.red() + c.green() + c.blue()) / 3.0
-                val = brightness / 255.0
+                # Only WHITE is road - check if RGB values are all high (white-ish)
+                # Colored pixels (brown, blue, etc.) should NOT be detected as road
+                r, g, b = c.red(), c.green(), c.blue()
+                # White detection: all channels must be high AND similar
+                is_white = (min(r, g, b) > 200) and (max(r, g, b) - min(r, g, b) < 30)
+                val = 1.0 if is_white else 0.0
             sensor_vals.append(val)
             
         dx = self.target_pos.x() - self.car_pos.x()
@@ -258,15 +262,31 @@ class CarBrain:
             avg_brightness = np.mean(sensors)
             reward += avg_brightness * 15
             
-            # 2. Strong reward for approaching target
+            # 2. Crash prevention - penalize when obstacles detected
+            min_sensor = min(sensors)
+            if min_sensor < 0.5:  # Obstacle detected
+                # Penalty increases as obstacle gets closer
+                reward -= (0.5 - min_sensor) * 30
+            
+            # 3. Strong reward for approaching target
+            dist_improvement = 0
             if self.prev_dist is not None:
                 dist_improvement = self.prev_dist - dist
                 reward += dist_improvement * 20
             self.prev_dist = dist
             
-            # 3. Reward facing toward target (critical for continuous steering)
+            # 4. Reward facing toward target (critical for continuous steering)
             angle_to_target = next_state[7]  # normalized [-1, 1]
             reward += (1.0 - abs(angle_to_target)) * 5
+            
+            # Store debug info for visualization
+            self.debug_sensors = sensors
+            self.debug_reward_components = {
+                'road': avg_brightness * 15,
+                'crash_penalty': -(0.5 - min_sensor) * 30 if min_sensor < 0.5 else 0,
+                'distance': dist_improvement * 20,
+                'alignment': (1.0 - abs(angle_to_target)) * 5
+            }
             
         self.score += reward
         self.episode_reward += reward
@@ -275,7 +295,10 @@ class CarBrain:
     def check_pixel(self, x, y):
         if 0 <= x < self.w and 0 <= y < self.h:
             c = QColor(self.map.pixel(int(x), int(y)))
-            return ((c.red() + c.green() + c.blue()) / 3.0) / 255.0
+            r, g, b = c.red(), c.green(), c.blue()
+            # White detection: all channels must be high AND similar
+            is_white = (min(r, g, b) > 200) and (max(r, g, b) - min(r, g, b) < 30)
+            return 1.0 if is_white else 0.0
         return 0.0
 
     def select_action(self, state):
@@ -395,40 +418,29 @@ class SensorItem(QGraphicsItem):
     def __init__(self):
         super().__init__()
         self.setZValue(90)
-        self.pulse = 0
-        self.pulse_speed = 0.3
-        self.is_detecting = True
+        self.sensor_value = 1.0  # 0=obstacle, 1=road
+        self.end_pos = QPointF(0, 0)
         
-    def set_detecting(self, detecting):
-        self.is_detecting = detecting
+    def set_sensor_data(self, value, end_pos):
+        self.sensor_value = value
+        self.end_pos = end_pos
         self.update()
     
     def boundingRect(self):
-        return QRectF(-4, -4, 8, 8)
+        return QRectF(-SENSOR_DIST-5, -SENSOR_DIST-5, SENSOR_DIST*2+10, SENSOR_DIST*2+10)
     
     def paint(self, painter, option, widget):
-        self.pulse += self.pulse_speed
-        if self.pulse > 1.0:
-            self.pulse = 0
-        
-        if self.is_detecting:
-            color = C_SENSOR_ON
-            outer_alpha = int(150 * (1 - self.pulse))
+        # Color based on sensor value
+        if self.sensor_value > 0.7:
+            color = QColor(0, 255, 0, 180)  # Green = road
+        elif self.sensor_value > 0.4:
+            color = QColor(255, 255, 0, 180)  # Yellow = edge
         else:
-            color = C_SENSOR_OFF
-            outer_alpha = int(200 * (1 - self.pulse))
+            color = QColor(255, 0, 0, 200)  # Red = obstacle
         
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        
-        outer_size = 3 + (2 * self.pulse)
-        outer_color = QColor(color)
-        outer_color.setAlpha(outer_alpha)
-        painter.setPen(Qt.PenStyle.NoPen)
-        painter.setBrush(QBrush(outer_color))
-        painter.drawEllipse(QPointF(0, 0), outer_size, outer_size)
-        
-        painter.setBrush(QBrush(color))
-        painter.drawEllipse(QPointF(0, 0), 2, 2)
+        # Draw line from car to sensor endpoint
+        painter.setPen(QPen(color, 3))
+        painter.drawLine(QPointF(0, 0), self.end_pos - self.pos())
 
 class CarItem(QGraphicsItem):
     def __init__(self):
@@ -578,10 +590,22 @@ class T3DNavApp(QMainWindow):
         
         self.val_rew = QLabel("0")
         self.val_rew.setStyleSheet(f"color: {C_ACCENT.name()}; font-weight: bold;")
-        sf_layout.addWidget(QLabel("Ep Reward:"), 2, 0)
+        sf_layout.addWidget(QLabel("Last Reward:"), 2, 0)
         sf_layout.addWidget(self.val_rew, 2, 1)
         
         vbox.addWidget(stats_frame)
+        
+        # Debug Panel
+        vbox.addSpacing(10)
+        debug_label = QLabel("DEBUG INFO")
+        debug_label.setStyleSheet("font-weight: bold;")
+        vbox.addWidget(debug_label)
+        
+        self.debug_panel = QTextEdit()
+        self.debug_panel.setReadOnly(True)
+        self.debug_panel.setMaximumHeight(150)
+        self.debug_panel.setStyleSheet(f"background-color: {C_INFO_BG.name()}; color: {C_TEXT.name()}; font-family: monospace; font-size: 10px;")
+        vbox.addWidget(self.debug_panel)
 
         vbox.addWidget(QLabel("LOGS"))
         self.log_console = QTextEdit()
@@ -756,6 +780,9 @@ class T3DNavApp(QMainWindow):
         self.brain.total_timesteps += 1
         self.brain.episode_timesteps += 1
         
+        # Update debug panel
+        self.update_debug_panel()
+        
         # Check for target switch
         if self.brain.current_target_idx != prev_target_idx:
             target_num = self.brain.current_target_idx + 1
@@ -789,7 +816,35 @@ class T3DNavApp(QMainWindow):
         self.val_episode.setText(f"{self.brain.episode_num}")
         self.val_rew.setText(f"{self.brain.episode_reward:.1f}")
 
+    def update_debug_panel(self):
+        if not hasattr(self.brain, 'debug_sensors'):
+            return
+        
+        sensors = self.brain.debug_sensors
+        components = self.brain.debug_reward_components
+        
+        # Sensor visualization with color coding
+        sensor_text = "SENSORS (0=obstacle, 1=road):\n"
+        angles = [-45, -30, -15, 0, 15, 30, 45]
+        for i, (angle, val) in enumerate(zip(angles, sensors)):
+            bar_len = int(val * 20)
+            bar = '█' * bar_len + '░' * (20 - bar_len)
+            color = '🟢' if val > 0.7 else '🟡' if val > 0.4 else '🔴'
+            sensor_text += f"{angle:+4d}°: {color} {bar} {val:.2f}\n"
+        
+        # Reward components
+        reward_text = "\nREWARD COMPONENTS:\n"
+        reward_text += f"  Road:     {components['road']:+7.2f}\n"
+        reward_text += f"  Crash:    {components['crash_penalty']:+7.2f}\n"
+        reward_text += f"  Distance: {components['distance']:+7.2f}\n"
+        reward_text += f"  Align:    {components['alignment']:+7.2f}\n"
+        total = sum(components.values())
+        reward_text += f"  TOTAL:    {total:+7.2f}"
+        
+        self.debug_panel.setPlainText(sensor_text + reward_text)
+    
     def update_visuals(self):
+        if not self.brain: return
         self.car_item.setPos(self.brain.car_pos)
         self.car_item.setRotation(self.brain.car_angle)
         
@@ -798,9 +853,10 @@ class T3DNavApp(QMainWindow):
             target_item.set_active(is_active)
         
         state, _ = self.brain.get_state()
+        car_pos = self.brain.car_pos
         for i, (coord, sensor_val) in enumerate(zip(self.brain.sensor_coords, state[:7])):
-            self.sensor_items[i].setPos(coord)
-            self.sensor_items[i].set_detecting(sensor_val > 0.4)
+            self.sensor_items[i].setPos(car_pos)
+            self.sensor_items[i].set_sensor_data(sensor_val, coord)
 
 # ==========================================
 # 5. MAIN
