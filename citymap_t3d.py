@@ -44,8 +44,8 @@ C_SENSOR_ON = QColor("#A3BE8C")
 C_SENSOR_OFF= QColor("#BF616A")
 
 # Physics Parameters
-CAR_WIDTH = 14     
-CAR_HEIGHT = 8   
+CAR_WIDTH = 28     
+CAR_HEIGHT = 16   
 SENSOR_DIST = 20  # Match DQN solution
 SENSOR_ANGLE = 45
 TARGET_RADIUS = 20
